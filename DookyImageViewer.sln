@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31129.286
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DookyImageViewer", "DookyImageViewer\DookyImageViewer.vcxproj", "{7427B88F-3003-4B1C-8A6E-0DA8931F01A7}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7427B88F-3003-4B1C-8A6E-0DA8931F01A7}.Debug|x64.ActiveCfg = Debug|x64
+		{7427B88F-3003-4B1C-8A6E-0DA8931F01A7}.Debug|x64.Build.0 = Debug|x64
+		{7427B88F-3003-4B1C-8A6E-0DA8931F01A7}.Debug|x86.ActiveCfg = Debug|Win32
+		{7427B88F-3003-4B1C-8A6E-0DA8931F01A7}.Debug|x86.Build.0 = Debug|Win32
+		{7427B88F-3003-4B1C-8A6E-0DA8931F01A7}.Release|x64.ActiveCfg = Release|x64
+		{7427B88F-3003-4B1C-8A6E-0DA8931F01A7}.Release|x64.Build.0 = Release|x64
+		{7427B88F-3003-4B1C-8A6E-0DA8931F01A7}.Release|x86.ActiveCfg = Release|Win32
+		{7427B88F-3003-4B1C-8A6E-0DA8931F01A7}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {922B795D-4B33-422E-8475-90A402DC3DB5}
+	EndGlobalSection
+EndGlobal
