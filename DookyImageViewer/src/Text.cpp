@@ -15,7 +15,7 @@ namespace Dooky {
 		glGenVertexArrays(1, &vao);
 		glGenBuffers(1, &vbo);
 
-		shader.LoadShaderFile("resources/shaders/Text.shader");
+		shader.LoadShaderFile("./resources/shaders/Text.shader");
 	}
 
 	Text::~Text() {

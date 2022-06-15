@@ -39,12 +39,14 @@ namespace Dooky {
 		bool wantsToOpenFile;
 		bool wantsToOpenDirectory;
 		bool wantsToOpenSubdirectories;
+		bool wantsToSaveImageToFile;
 		bool wantsToOpenFileLocationInExplorer;
 		bool wantsToRefreshDirectory;
 
 		bool showThumbnails;
 		bool showInformationBar; // Bottom bar with zoom
 		bool ignoreUnknownFileExtensions;
+		bool colorInfoNormalized;
 
 		bool sortByLastModifiedDate;
 
@@ -58,6 +60,7 @@ namespace Dooky {
 		bool adjustment_Grayscale;
 		bool adjustment_InvertImage;
 		bool adjustment_ShowAlphaCheckerboard;
+		bool adjustment_NoTonemapping;
 		bool adjustment_UseFlatTonemapping;
 		float adjustment_Exposure;
 		float adjustment_Offset;

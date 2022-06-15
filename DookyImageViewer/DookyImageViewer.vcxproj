@@ -158,6 +158,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\Application.cpp" />
+    <ClCompile Include="src\ConfigReader.cpp" />
     <ClCompile Include="src\GUI.cpp" />
     <ClCompile Include="src\ImageInfo.cpp" />
     <ClCompile Include="src\Font.cpp" />
@@ -181,6 +182,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Application.h" />
+    <ClInclude Include="src\ConfigReader.h" />
     <ClInclude Include="src\GUI.h" />
     <ClInclude Include="src\ImageInfo.h" />
     <ClInclude Include="src\Font.h" />

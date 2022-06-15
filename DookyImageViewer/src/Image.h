@@ -16,7 +16,7 @@ namespace Dooky {
 	};
 
 	class Image {
-	protected:
+	private:
 		std::unordered_map<int, AnimatedImageFrame> animatedImages;
 		std::vector<int> animatedImagesDelays;
 		int animatedImagesDelaysTotal;
@@ -48,7 +48,10 @@ namespace Dooky {
 		void GenericCreate(int w, int h, glm::vec4 c);
 		void GenericSetPixel(int x, int y, glm::vec4 c);
 	public:
-		bool adjustment_UseTonemapping;
+		bool useTonemapping;
+		bool useMipmaps;
+
+		bool adjustment_NoTonemapping;
 		bool adjustment_UseFlatTonemapping;
 		bool adjustment_ShowAlphaCheckerboard;
 		bool adjustment_ShowZebraPattern;
@@ -84,6 +87,7 @@ namespace Dooky {
 		int GetAnimatedImageCurrentIndex();
 		int GetAnimatedImageFrameCount();
 		float GetAnimatedImageFPS();
+		float* GetRawImageData();
 
 		void Create(int w, int h, glm::vec3 c);
 		void Create(int w, int h, glm::vec4 c);
@@ -92,6 +96,7 @@ namespace Dooky {
 
 		void LoadRawData(int width, int height, std::vector<unsigned char> data);
 		bool LoadImageFile(const std::filesystem::path& path);
+		bool WriteToFile(const std::string& path);
 
 		void Draw(Window& window);
 	};

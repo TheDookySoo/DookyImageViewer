@@ -3,8 +3,10 @@
 #include <Windows.h>
 #include <direct.h>
 #include <filesystem>
-#include <fstream>
 #include <Magick++.h>
+
+#include "ConfigReader.h"
+
 
 int wmain(int argc, wchar_t** argv) {
     std::string parentPath = std::filesystem::path(argv[0]).parent_path().string();
@@ -26,36 +28,24 @@ int wmain(int argc, wchar_t** argv) {
     char convertedPath[1024];
     WideCharToMultiByte(65001, 0, wideParentPath.c_str(), -1, convertedPath, 1024, NULL, NULL);
 
-    if (_chdir(convertedPath))
-        printf("Successfully changed working directory.\n");
+    if (_chdir(convertedPath)) {
+        printf("Did not change working directory.\n");
+    }
 
     char current[1024];
 
     if (_getcwd(current, sizeof(current))) {
         printf("Current: %s\n", current);
-        printf("Working: %s\n", convertedPath);
+        printf("Target: %s\n", convertedPath);
     } else {
         printf("Failed to retrieve current working directory.\n");
     }
 
     // Read image viewer config
-    if (!std::filesystem::exists("imageviewerconfig.ini")) {
-        std::ofstream newConfig("imageviewerconfig.ini");
-        newConfig << "hideconsole" << std::endl;
-        newConfig.close();
-    }
+    Config config = ReadConfigFile("imageviewerconfig.ini");
 
-    std::fstream configStream("imageviewerconfig.ini");
-    std::string line;
-
-    if (configStream.is_open()) {
-        while (std::getline(configStream, line)) {
-            if (line == "hideconsole") {
-                FreeConsole();
-            }
-        }
-    } else {
-        printf("Failed to open 'imageviewerconfig.ini'\n");
+    if (config.hideConsole == true) {
+        FreeConsole();
     }
 
     // Initialize Magick++
@@ -65,5 +55,5 @@ int wmain(int argc, wchar_t** argv) {
     // Begin Application
 
     Dooky::Application app;
-    app.Begin(argc, argv);
+    app.Begin(argc, argv, config);
 }

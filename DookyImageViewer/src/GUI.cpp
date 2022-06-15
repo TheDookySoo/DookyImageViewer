@@ -19,12 +19,14 @@ namespace Dooky {
 		wantsToOpenFile = false;
 		wantsToOpenDirectory = false;
 		wantsToOpenSubdirectories = false;
+		wantsToSaveImageToFile = false;
 		wantsToOpenFileLocationInExplorer = false;
 		wantsToRefreshDirectory = false;
 
 		showThumbnails = true;
 		showInformationBar = true;
 		ignoreUnknownFileExtensions = true;
+		colorInfoNormalized = true;
 
 		sortByLastModifiedDate = false;
 
@@ -47,6 +49,7 @@ namespace Dooky {
 		adjustment_Grayscale = false;
 		adjustment_InvertImage = false;
 		adjustment_ShowAlphaCheckerboard = true;
+		adjustment_NoTonemapping = false;
 		adjustment_UseFlatTonemapping = false;
 		adjustment_Exposure = 0.0f;
 		adjustment_Offset = 0.0f;
@@ -129,6 +132,7 @@ namespace Dooky {
 					if (ImGui::MenuItem("Open File")) wantsToOpenFile = true;
 					if (ImGui::MenuItem("Open Directory")) wantsToOpenDirectory = true;
 					if (ImGui::MenuItem("Open Subdirectories")) wantsToOpenSubdirectories = true;
+					if (ImGui::MenuItem("Save To File")) wantsToSaveImageToFile = true;
 					ImGui::Separator();
 					if (ImGui::MenuItem("Open File In Explorer")) wantsToOpenFileLocationInExplorer = true;
 					if (ImGui::MenuItem("Refresh Directory")) wantsToRefreshDirectory = true;
@@ -175,6 +179,7 @@ namespace Dooky {
 				if (ImGui::BeginMenu("Settings")) {
 					ImGui::Checkbox("Ignore Unknown Extensions", &ignoreUnknownFileExtensions);
 					ImGui::Checkbox("Sort By Last Modified Time", &sortByLastModifiedDate);
+					ImGui::Checkbox("Color Info Normalized", &colorInfoNormalized);
 
 					ImGui::EndMenu();
 				}
@@ -222,6 +227,7 @@ namespace Dooky {
 
 					ImGui::Checkbox("Grayscale", &adjustment_Grayscale);
 					ImGui::Checkbox("Invert Image", &adjustment_InvertImage);
+					ImGui::Checkbox("No Tonemapping", &adjustment_NoTonemapping);
 					ImGui::Checkbox("Use Flat Tonemapping", &adjustment_UseFlatTonemapping);
 					ImGui::SliderFloat("Exposure", &adjustment_Exposure, -8.0f, 8.0f, "%.2f");
 					ImGui::SliderFloat("Offset", &adjustment_Offset, -1.0f, 1.0f, "%.2f");

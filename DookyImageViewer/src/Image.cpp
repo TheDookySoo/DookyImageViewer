@@ -4,9 +4,13 @@
 #include <fstream>
 #include <unordered_set>
 #include <Windows.h>
-
+#include <chrono>
 #include <Magick++.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "vendor/stb_image/stb_image.h"
+
+#include "StringUtils.h"
 
 std::unordered_set<std::string> TONEMAPPED_IMAGE_EXTENSIONS = {
 	".hdr", ".exr", ".cr2", ".crw", ".dcr",
@@ -14,6 +18,8 @@ std::unordered_set<std::string> TONEMAPPED_IMAGE_EXTENSIONS = {
 	".x3f"
 };
 
+Magick::Image* loadedMagickImage;
+bool loadedFirstMagickImage = false;
 
 namespace Dooky {
 	////////////////////////////////////////
@@ -21,8 +27,7 @@ namespace Dooky {
 	////////////////////////////////////////
 
 	Image::Image() {
-		//shader.LoadShaderFile("resources/shaders/Image.shader");
-		shader.LoadShaderFile("C:/Users/Toby/source/repos/DookyImageViewer/DookyImageViewer/resources/shaders/Image.shader");
+		shader.LoadShaderFile("./resources/shaders/Image.shader");
 
 		animatedImagesDelaysTotal = 0;
 		animatedImageHasPlayedYet = false;
@@ -36,11 +41,13 @@ namespace Dooky {
 		rotation = 0.0f;
 
 		useLinearInterpolation = true;
+		useMipmaps = true;
 		flipVertically = false;
 		flag_ImageWasChanged = false;
 
 		// Shader adjustments
-		adjustment_UseTonemapping = false;
+		useTonemapping = false;
+		adjustment_NoTonemapping = false;
 		adjustment_UseFlatTonemapping = false;
 		adjustment_ShowAlphaCheckerboard = true;
 		adjustment_ShowZebraPattern = false;
@@ -94,7 +101,12 @@ namespace Dooky {
 		glBindTexture(GL_TEXTURE_2D, textureId);
 
 		if (useLinearInterpolation) {
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			if (useMipmaps) {
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+			} else {
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			}
+
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		} else {
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -102,8 +114,7 @@ namespace Dooky {
 		}
 
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, w, h, 0, GL_RGBA, GL_FLOAT, data);
-
-		//glGenerateMipmap(GL_TEXTURE_2D);
+		glGenerateMipmap(GL_TEXTURE_2D);
 
 		glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -245,6 +256,10 @@ namespace Dooky {
 		return animatedImageFPS;
 	}
 
+	float* Image::GetRawImageData() {
+		return floatImageData.data();
+	}
+
 	void Image::Create(int w, int h, glm::vec3 c) {
 		GenericCreate(w, h, { c.r, c.g, c.b, 1.0f });
 	}
@@ -296,8 +311,12 @@ namespace Dooky {
 		int height = 0;
 
 		try {
+			printf("Loading.\n");
+
 			std::list<Magick::Image> imageList;
 			Magick::readImages(&imageList, convertedPath);
+
+			printf("Loaded.\n");
 
 			if (imageList.empty())
 				false;
@@ -309,14 +328,23 @@ namespace Dooky {
 			animatedImageHasPlayedYet = false;
 
 			// Decide if image should be tonemapped
-			adjustment_UseTonemapping = TONEMAPPED_IMAGE_EXTENSIONS.contains(extension);
+			useTonemapping = TONEMAPPED_IMAGE_EXTENSIONS.contains(extension);
 
 			Magick::Image* frontImage = &imageList.front();
+			
+			if (loadedFirstMagickImage == false) {
+				loadedFirstMagickImage = true;
+				loadedMagickImage = new Magick::Image(*frontImage);
+			}
+
 			width = frontImage->size().width();
 			height = frontImage->size().height();
 
 			if (imageList.size() == 1) { // Single, static image
+				//auto t1 = std::chrono::high_resolution_clock::now();
 				frontImage->type(Magick::TrueColorAlphaType);
+				//auto t2 = std::chrono::high_resolution_clock::now();
+				//std::cout << "Time elapsed: " << (float)(std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count()) / 1000000000.0f << std::endl;
 
 				// Append data
 				float* data = frontImage->getPixels(0, 0, width, height);
@@ -372,10 +400,73 @@ namespace Dooky {
 
 			return true;
 		} catch (std::exception& exception) {
-			//std::cout << "LOAD IMAGE EXCEPTION: " << exception.what() << std::endl;
+			std::cout << "FAILED TO LOAD IMAGE: " << exception.what() << std::endl;
+
+			/*
+			std::cout << "RESORTING TO stb_image AS MAGICK FAILED TO LOAD IMAGE: " << exception.what() << std::endl;
+
+			try {
+				int x, y, n; // n = components, e.g 3 = RGB, 4 = RGBA
+				unsigned char* data = stbi_load(convertedPath, &x, &y, &n, 4); // In this case 4 is is the fifth arg to force 4 components
+
+				if (data == nullptr) {
+					std::cout << "stb_image failed to load image." << std::endl;
+					return false;
+				}
+
+				// Append data
+				floatImageData.resize(x * y * n, 0);
+				floatImageData.assign(data, data + (x * y * n));
+
+				Update(floatImageData.data(), width, height);
+
+				stbi_image_free(data);
+				return true;
+			} catch (std::exception& exception) {
+				std::cout << "stb_image FAILED TO LOAD IMAGE: " << exception.what() << std::endl;
+				return false;
+			}
+			*/
+
 			return false;
 		}
 		
+		return true;
+	}
+
+	// Returns true if successful
+	// Returns false if file was written but the image was a JPEG instead of the extension specified. e.g when writing as "image.cr2" it will write as a JPEG and this will return false
+	bool Image::WriteToFile(const std::string& path) {
+		if (loadedMagickImage != nullptr && loadedFirstMagickImage) {
+			loadedMagickImage->write(path);
+
+			// Notify user if extension is not jpeg, but jpeg was written.
+			std::filesystem::path pathToPath(path);
+
+			if (pathToPath.has_extension()) {
+				std::string ext = pathToPath.extension().string();
+				LowerString(ext);
+
+				if (ext != ".jpg" && ext != ".jpeg" && ext != ".jpe" && ext != ".jif" && ext != ".jfif") { // User did not specify jpeg as the file extension
+					std::ifstream stream(path, std::ios::in | std::ios::binary);
+
+					if (stream.is_open()) {
+						char firstThreeBytes[3];
+						stream.read(firstThreeBytes, 3);
+						stream.close();
+
+						int first = 256 + firstThreeBytes[0];
+						int second = 256 + firstThreeBytes[1];
+						int third = 256 + firstThreeBytes[2];
+
+						if (first == 0xFF && second == 0xD8 && third == 0xFF) {
+							return false;
+						}
+					}
+				}
+			}
+		}
+
 		return true;
 	}
 
@@ -401,17 +492,12 @@ namespace Dooky {
 				animatedImageIndex = got->second.index;
 
 				for (int i = 0; i < data.size() / 4; i++) {
-					float r = data[i * 4 + 0];
-					float g = data[i * 4 + 1];
-					float b = data[i * 4 + 2];
 					float a = data[i * 4 + 3];
 
-					if (a > 0) {
-						floatImageData[i * 4 + 0] = data[i * 4 + 0];
-						floatImageData[i * 4 + 1] = data[i * 4 + 1];
-						floatImageData[i * 4 + 2] = data[i * 4 + 2];
-						floatImageData[i * 4 + 3] = data[i * 4 + 3];
-					}
+					floatImageData[i * 4 + 0] = data[i * 4 + 0];
+					floatImageData[i * 4 + 1] = data[i * 4 + 1];
+					floatImageData[i * 4 + 2] = data[i * 4 + 2];
+					floatImageData[i * 4 + 3] = data[i * 4 + 3];
 				}
 
 				Update(floatImageData.data(), size.x, size.y);
@@ -438,7 +524,8 @@ namespace Dooky {
 		shader.SetUniform1f("time", window.GetTime());
 		shader.SetUniform2f("position", position.x, position.y);
 
-		shader.SetUniformBool("adjustment_UseTonemapping"        , adjustment_UseTonemapping);
+		shader.SetUniformBool("useTonemapping"                   , useTonemapping);
+		shader.SetUniformBool("adjustment_NoTonemapping"         , adjustment_NoTonemapping);
 		shader.SetUniformBool("adjustment_UseFlatTonemapping"    , adjustment_UseFlatTonemapping);
 		shader.SetUniformBool("adjustment_ShowAlphaCheckerboard" , adjustment_ShowAlphaCheckerboard);
 		shader.SetUniformBool("adjustment_ShowZebraPattern"      , adjustment_ShowZebraPattern);

@@ -13,7 +13,6 @@
 #include <unordered_set>
 #include <Magick++.h>
 
-#define STB_IMAGE_IMPLEMENTATION
 #include "vendor/stb_image/stb_image.h"
 
 
@@ -76,6 +75,11 @@ int mainImageRotation = 0;
 bool mainImageEngaged = false;
 bool mainImageFailedToLoad = false;
 bool mainImageDragging = false;
+size_t mainImageFileSize = 0;
+
+bool hotkeyShouldOpenFile = false;
+bool hotkeyShouldOpenDirectory = false;
+bool hotkeyShouldOpenSubdirectories = false;
 
 glm::ivec2 lastMouseDownPosition = { 0, 0 };
 float lastMouseDownTime = 0.0f;
@@ -85,8 +89,14 @@ int browsingListSortMode = 0;
 bool browsed = false;
 std::vector<std::filesystem::path> browsingList;
 std::filesystem::path mainImageCurrentFilePath;
+std::stringstream fileSizeStr;
 
 Dooky::Text* errorMessageText;
+
+size_t GetFileSize(const std::filesystem::path& path) {
+    std::ifstream input(path, std::ifstream::ate | std::ifstream::binary);
+    return input.tellg();
+}
 
 // APPLICATION
 
@@ -137,6 +147,7 @@ namespace Dooky {
         gui.menuBarExtraTextColor = MENU_BAR_EXTRA_TEXT_COLOR_ERROR;
 
         errorMessageText->SetString("Failed to open this image.");
+        fileSizeStr = std::stringstream();
 
         std::string fileNameStr = "CAN'T DISPLAY FILE NAME!";
         std::string browsingIndex = std::to_string(browsingListIndex + 1) + "/" + std::to_string(browsingList.size());
@@ -151,7 +162,7 @@ namespace Dooky {
         gui.menuBarText = "| " + browsingIndex + " | " + fileNameStr;
     }
 
-    void HandlePostImageLoad(Window& window, Image& mainImage, GUI& gui) {
+    void HandlePostImageLoad(Window& window, Image& mainImage, GUI& gui, const std::filesystem::path& loadedPath) {
         mainImageFailedToLoad = false;
         mainImageRotation = 0;
 
@@ -180,6 +191,8 @@ namespace Dooky {
             gui.imageInformationExifText = exifInfo;
         }
 
+        mainImageFileSize = GetFileSize(loadedPath);
+
         // Information text
         std::string informationText;
 
@@ -187,6 +200,14 @@ namespace Dooky {
         std::string resolution = std::to_string(mainImage.GetSize().x) + "x" + std::to_string(mainImage.GetSize().y);
         std::string fileNameStr = "CAN'T DISPLAY FILE NAME!";
         std::string modifiedDateStr = GetFileLastModifiedTimestampString(mainImageCurrentFilePath);
+
+        fileSizeStr = std::stringstream();
+        fileSizeStr << "File size: ";
+
+        try {
+            fileSizeStr.imbue(std::locale(""));
+            fileSizeStr << std::fixed << GetFileSize(loadedPath) << " bytes";
+        } catch (std::system_error& exception) {}
 
         try {
             fileNameStr = mainImageCurrentFilePath.filename().string();
@@ -221,7 +242,7 @@ namespace Dooky {
     // Only changes the image by itself
     bool ChangeImage(Window& window, Image& mainImage, GUI& gui, const std::filesystem::path& imagePath) {
         if (mainImage.LoadImageFile(imagePath)) {
-            HandlePostImageLoad(window, mainImage, gui);
+            HandlePostImageLoad(window, mainImage, gui, imagePath);
             return true;
         } else {
             //std::cout << "ERROR: Failed to change image: " << imagePath.string() << std::endl;
@@ -275,7 +296,7 @@ namespace Dooky {
 
 
                 if (mainImage.LoadImageFile(front)) {
-                    HandlePostImageLoad(window, mainImage, gui);
+                    HandlePostImageLoad(window, mainImage, gui, front);
                 } else {
                     HandleImageOpenFail(mainImage, gui);
                     std::cout << "ERROR: Failed to load first image in newBrowsingList: " << openPath.string() << std::endl;
@@ -317,7 +338,7 @@ namespace Dooky {
                 browsingListIndex = newBrowsingListIndex;
 
                 // Reset image stuff
-                HandlePostImageLoad(window, mainImage, gui);
+                HandlePostImageLoad(window, mainImage, gui, openPath2);
                 FitImageOnScreen(window, mainImage);
 
                 return true;
@@ -527,7 +548,7 @@ namespace Dooky {
 
     void HandleGuiInteraction(Window& window, Image& mainImage, ThumbnailPreview& thumbnails, GUI& gui) {
         // Open single file
-        if (gui.wantsToOpenFile) {
+        if (gui.wantsToOpenFile || hotkeyShouldOpenFile) {
             auto selection = pfd::open_file(
                 "Select a file.",
                 ".",
@@ -557,7 +578,7 @@ namespace Dooky {
         }
 
         // Open directory
-        if (gui.wantsToOpenDirectory) {
+        if (gui.wantsToOpenDirectory || hotkeyShouldOpenDirectory) {
             auto selection = pfd::select_folder(
                 "Select a directory",
                 ".",
@@ -574,7 +595,7 @@ namespace Dooky {
         }
 
         // Open directory and subdirectories
-        if (gui.wantsToOpenSubdirectories) {
+        if (gui.wantsToOpenSubdirectories || hotkeyShouldOpenSubdirectories) {
             auto selection = pfd::select_folder(
                 "Select a directory",
                 ".",
@@ -613,11 +634,10 @@ namespace Dooky {
     }
 
     void HandleImageShader(Window& window, Image& mainImage, GUI& gui) {
-        //mainImage.adjustments_UseTonemapping;
-
         mainImage.adjustment_ShowZebraPattern = gui.adjustment_ShowZebraPattern;
         mainImage.adjustment_ZebraPatternThreshold = gui.adjustment_ZebraPatternThreshold;
 
+        mainImage.adjustment_NoTonemapping = gui.adjustment_NoTonemapping;
         mainImage.adjustment_UseFlatTonemapping = gui.adjustment_UseFlatTonemapping;
         mainImage.adjustment_ShowAlphaCheckerboard = gui.adjustment_ShowAlphaCheckerboard;
 
@@ -647,7 +667,7 @@ namespace Dooky {
 	///// PUBLIC
 	////////////////////////////////////////
 
-    void Application::Begin(int argc, wchar_t** argv) {
+    void Application::Begin(int argc, wchar_t** argv, Config config) {
         Window window({ 800, 600 }, 3, 3, 0, L"Dooky Image Viewer");
         window.SetVsyncEnabled(true);
 
@@ -660,6 +680,7 @@ namespace Dooky {
         Image mainImage;
         mainImage.SetAnchorPoint(0.5f, 0.5f);
         mainImage.FlipVertically(true);
+        mainImage.useMipmaps = config.useMipmaps;
 
         errorMessageText = new Text;
         errorMessageText->LoadFontFromPath("resources/fonts/Consolas.ttf", 16);
@@ -722,6 +743,17 @@ namespace Dooky {
             glm::ivec2 mousePosition = window.GetMousePosition();
             glm::ivec2 windowSize = window.GetSize();
             glm::ivec2 mainImageSize = mainImage.GetSize();
+
+            // Hotkeys
+            if (window.IsKeyDown(GLFW_KEY_LEFT_CONTROL)) {
+                if (window.WasKeyFired(GLFW_KEY_O)) {
+                    hotkeyShouldOpenFile = true;
+                } else if (window.WasKeyFired(GLFW_KEY_P)) {
+                    hotkeyShouldOpenDirectory = true;
+                } else if (window.WasKeyFired(GLFW_KEY_L)) {
+                    hotkeyShouldOpenSubdirectories = true;
+                }
+            }
             
             // Update
             HandleImageBrowsing(window, mainImage, gui);
@@ -809,7 +841,7 @@ namespace Dooky {
                 // Image rotation
                 zoomTextStr << " | Rot:" << -mainImageRotation;
 
-                // Selected pixel
+                // Selected pixel (takes into account rotation of the image)
                 glm::ivec2 tempImageSize = mainImage.GetSize();
                 glm::ivec2 tempMousePosition = mousePosition;
 
@@ -851,7 +883,7 @@ namespace Dooky {
                 }
 
                 zoomTextStr << " | X:" << std::to_string(selectedPixel.x) << " Y:" << std::to_string(selectedPixel.y);
-                zoomTextStr << std::setprecision(4) << " | ";
+                zoomTextStr << std::setprecision(gui.colorInfoNormalized ? 4 : 2) << " | ";
 
                 // Selected pixel color
                 glm::vec4 pixelColor = mainImage.GetPixel(selectedPixel.x, selectedPixel.y);
@@ -867,7 +899,9 @@ namespace Dooky {
                 colorBox.SetPosition(colorBoxOffset, colorBoxY);
                 colorBox.adjustment_ChannelMultiplier = { pixelColor.r, pixelColor.g, pixelColor.b, pixelColor.a };
 
-                zoomTextStr << "  R:" << pixelColor.r << " G:" << pixelColor.g << " B:" << pixelColor.b << " A:" << pixelColor.a;
+                int colorMult = gui.colorInfoNormalized ? 1 : 255;
+
+                zoomTextStr << "  R:" << pixelColor.r * colorMult << " G:" << pixelColor.g * colorMult << " B:" << pixelColor.b * colorMult << " A:" << pixelColor.a * colorMult;
 
                 // Animated image text (GIF)
                 if (mainImage.GetAnimatedImageFrameCount() > 1) {
@@ -883,8 +917,41 @@ namespace Dooky {
                     zoomTextStr << " | " << frameProgressStr;
                 }
 
+                // File size
+                if (!fileSizeStr.str().empty()) {
+                    zoomTextStr << " | " << fileSizeStr.str();
+                }
+
                 zoomText.SetPosition(mainImagePermissibleBoundary[0] + ZOOM_TEXT_OFFSET.x, window.GetSize().y + ZOOM_TEXT_OFFSET.y);
                 zoomText.SetString(zoomTextStr.str());
+            }
+
+            // Save to file
+            if (gui.wantsToSaveImageToFile) {
+                gui.wantsToSaveImageToFile = false;
+
+                std::ifstream stream;
+                stream.open(mainImageCurrentFilePath);
+
+                if (stream.is_open()) {
+                    std::string saveFileLocation = pfd::save_file(
+                        "Saving to file", "", 
+                        { 
+                            "All Files", "*"
+                        },
+                        pfd::opt::none
+                    ).result();
+
+                    if (!saveFileLocation.empty()) {
+                        bool successful = mainImage.WriteToFile(saveFileLocation);
+
+                        if (!successful) {
+                            pfd::message("Saved file as a JPEG", "File type is not supported. Saved as a JPEG instead.", pfd::choice::ok, pfd::icon::warning);
+                        }
+                    }
+                } else {
+                    pfd::message("Error saving to file!", "No image to save. Load an image or check if your image currently loaded still exists.", pfd::choice::ok, pfd::icon::error);
+                }
             }
 
             // Error message text
@@ -904,6 +971,11 @@ namespace Dooky {
             gui.Draw(window, window.IsFullscreen());
 
 			window.Display();
+
+            // Reset
+            hotkeyShouldOpenFile = false;
+            hotkeyShouldOpenDirectory = false;
+            hotkeyShouldOpenSubdirectories = false;
 		}
 	}
 }

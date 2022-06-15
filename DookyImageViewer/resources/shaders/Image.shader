@@ -30,7 +30,8 @@ uniform sampler2D image;
 uniform float time;
 uniform vec2 position;
 
-uniform bool adjustment_UseTonemapping;
+uniform bool useTonemapping;
+uniform bool adjustment_NoTonemapping;
 uniform bool adjustment_UseFlatTonemapping;
 uniform bool adjustment_ShowAlphaCheckerboard;
 uniform bool adjustment_ShowZebraPattern;
@@ -84,7 +85,7 @@ void main() {
 	fragColor = vec4(fragColor.rgb * pow(2.0f, adjustment_Exposure), fragColor.a);
 
 	// Tonemapping
-	if (adjustment_UseTonemapping) {
+	if (useTonemapping && !adjustment_NoTonemapping) {
 		//fragColor.rgb = fragColor.rgb * 1.6f; // Should multiply because ACES darkens stuff a bit
 		fragColor = vec4(fragColor.rgb * ACESInputMat, fragColor.a);
 

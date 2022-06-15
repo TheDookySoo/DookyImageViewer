@@ -25,7 +25,7 @@ namespace Dooky {
 		hoverBox.Create(1, 1, { 0.2f, 0.5f, 1.0f, 0.5f });
 		hoverBox.adjustment_ShowAlphaCheckerboard = false;
 
-		hoverText.LoadFontFromPath("resources/fonts/Consolas.ttf", 12);
+		hoverText.LoadFontFromPath("./resources/fonts/Consolas.ttf", 12);
 		hoverText.SetColor(1.0f, 1.0f, 1.0f);
 		hoverText.SetString("Text.");
 		hoverText.SetAnchorPoint(0.5f, 0.0f);
@@ -48,7 +48,7 @@ namespace Dooky {
 		if (thumb.success) {
 			thumbnail->image.LoadRawData(thumb.width, thumb.height, thumb.bitmap);
 		} else {
-			if (!thumbnail->image.LoadImageFile("resources/images/NoImage.png")) {
+			if (!thumbnail->image.LoadImageFile("./resources/images/NoImage.png")) {
 				thumbnail->image.Create(64, 64, { 1.0f, 0.0f, 1.0f, 1.0f });
 			}
 
