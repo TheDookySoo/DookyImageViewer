@@ -335,6 +335,9 @@ namespace Dooky {
 			if (loadedFirstMagickImage == false) {
 				loadedFirstMagickImage = true;
 				loadedMagickImage = new Magick::Image(*frontImage);
+			} else {
+				delete loadedMagickImage;
+				loadedMagickImage = new Magick::Image(*frontImage);
 			}
 
 			width = frontImage->size().width();

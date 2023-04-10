@@ -723,7 +723,7 @@ namespace Dooky {
         windowIcons[3].pixels = stbi_load("resources/icons/Icon_32.png", &windowIcons[3].width, &windowIcons[3].height, 0, 4);
         windowIcons[4].pixels = stbi_load("resources/icons/Icon_16.png", &windowIcons[4].width, &windowIcons[4].height, 0, 4);
 
-        glfwSetWindowIcon(window.GetWindowPointer(), 1, windowIcons);
+        glfwSetWindowIcon(window.GetWindowPointer(), 5, windowIcons);
 
         stbi_image_free(windowIcons[0].pixels);
         stbi_image_free(windowIcons[1].pixels);
@@ -930,27 +930,20 @@ namespace Dooky {
             if (gui.wantsToSaveImageToFile) {
                 gui.wantsToSaveImageToFile = false;
 
-                std::ifstream stream;
-                stream.open(mainImageCurrentFilePath);
+                std::string saveFileLocation = pfd::save_file(
+                    "Saving to file", "", 
+                    { 
+                        "All Files", "*"
+                    },
+                    pfd::opt::none
+                ).result();
 
-                if (stream.is_open()) {
-                    std::string saveFileLocation = pfd::save_file(
-                        "Saving to file", "", 
-                        { 
-                            "All Files", "*"
-                        },
-                        pfd::opt::none
-                    ).result();
+                if (!saveFileLocation.empty()) {
+                    bool successful = mainImage.WriteToFile(saveFileLocation);
 
-                    if (!saveFileLocation.empty()) {
-                        bool successful = mainImage.WriteToFile(saveFileLocation);
-
-                        if (!successful) {
-                            pfd::message("Saved file as a JPEG", "File type is not supported. Saved as a JPEG instead.", pfd::choice::ok, pfd::icon::warning);
-                        }
+                    if (!successful) {
+                        pfd::message("Saved file as a JPEG", "File type is not supported. Saved as a JPEG instead.", pfd::choice::ok, pfd::icon::warning);
                     }
-                } else {
-                    pfd::message("Error saving to file!", "No image to save. Load an image or check if your image currently loaded still exists.", pfd::choice::ok, pfd::icon::error);
                 }
             }
 

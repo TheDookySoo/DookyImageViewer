@@ -31,7 +31,7 @@ namespace Dooky {
 
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, glMajorVersion);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, glMinorVersion);
-		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // No need for deprecated functions
 
 		glfwWindowHint(GLFW_SAMPLES, antialiasingLevel);
 
